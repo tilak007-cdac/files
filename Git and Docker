@@ -1,0 +1,175 @@
+Create a Dockerfile to run a Welcome to CDAC printing program using Python and Flask.
+Run the above on the local machine using Docker.
+Create a GitHub repository and move all the files for this project on to GitHub.
+
+
+
+
+---
+
+### **Step 1: Set Up Project Files Using Notepad**
+
+Open **Notepad** and create three individual files. Save them all in a single new folder on your computer (e.g., `C:\CDAC_Project`).
+
+#### **File 1: `app.py**`
+
+This is your core Flask application script.
+
+1. Open Notepad.
+2. Paste the following code:
+
+```python
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def welcome():
+    return "<h1>Welcome to CDAC</h1>"
+
+if __name__ == '__main__':
+    # host='0.0.0.0' allows connections from outside the container
+    app.run(host='0.0.0.0', port=5000)
+
+```
+
+3. Click **File -> Save As**.
+4. Change *Save as type* to **All Files (*.*)**.
+5. Name it **`app.py`** and save.
+
+#### **File 2: `requirements.txt**`
+
+This lists the dependencies Python needs to install.
+
+1. Open a new Notepad window.
+2. Type the following text:
+
+```text
+Flask==3.0.3
+
+```
+
+3. Click **File -> Save As**.
+4. Change *Save as type* to **All Files (*.*)**.
+5. Name it **`requirements.txt`** and save.
+
+#### **File 3: `Dockerfile**`
+
+This file contains the configuration needed to package your app into a Docker container.
+
+1. Open a new Notepad window.
+2. Paste the following configuration:
+
+```dockerfile
+# Use an official lightweight Python runtime as a parent image
+FROM python:3.11-slim
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code into the container
+COPY app.py .
+
+# Expose port 5000 for network access
+EXPOSE 5000
+
+# Run the command to start the application
+CMD ["python", "app.py"]
+
+```
+
+3. Click **File -> Save As**.
+4. Change *Save as type* to **All Files (*.*)**.
+5. Name it **`Dockerfile`** (**Note:** Do *not* add `.txt` at the end, just `Dockerfile`).
+
+---
+
+### **Step 2: Build and Run the App on Your Local Machine via Docker**
+
+Open your command line interface (Command Prompt, PowerShell, or Git Bash) and navigate to your project directory:
+
+```bash
+cd C:\CDAC_Project
+
+```
+
+#### **1. Build the Docker Image**
+
+Compile your application files into a reusable container image named `cdac-flask-app`:
+
+```bash
+docker build -t cdac-flask-app .
+
+```
+
+#### **2. Run the Container**
+
+Launch your containerized application and map port `5000` from your machine to port `5000` inside the container:
+
+```bash
+docker run -d -p 5000:5000 --name cdac_container cdac-flask-app
+
+```
+
+#### **3. Verify locally**
+
+Open your web browser and navigate to:
+
+> **`http://localhost:5000`**
+
+You should see **"Welcome to CDAC"** rendered cleanly on your screen.
+
+---
+
+### **Step 3: Move Your Files to GitHub**
+
+#### **1. Create a Repository on GitHub Website**
+
+1. Go to [GitHub](https://github.com/) and log in.
+2. Click the **New** button (or the `+` icon in the upper-right corner) to create a repository.
+3. Name your repository (e.g., `CDAC-Flask-Docker`).
+4. Keep it Public/Private based on your preference, leave "Add a README" **unchecked**, and click **Create repository**.
+5. Copy the unique **HTTPS repository URL** provided on the setup page (it will look like `https://github.com/your-username/CDAC-Flask-Docker.git`).
+
+#### **2. Initialize Git and Push Files via Command Line**
+
+Back in your terminal window (make sure you are still inside `C:\CDAC_Project`), run the following commands sequentially:
+
+```bash
+# Initialize a local Git repository
+git init
+
+# Add all files (app.py, requirements.txt, Dockerfile) to staging
+git add .
+
+# Commit your changes with an informative message
+git commit -m "Initial commit: Added CDAC Flask app and Dockerfile"
+
+# Rename the default branch to 'main'
+git branch -M main
+
+# Link your local repository to your remote GitHub repository
+# (Replace the URL below with your actual copied GitHub URL)
+git remote add origin https://github.com/your-username/CDAC-Flask-Docker.git
+
+# Push your code to GitHub
+git push -u origin main
+
+```
+
+Once completed, refresh your GitHub repository page in the browser to view your uploaded project files.
+
+
+=======Renaming the file
+
+# Rename app.py.txt to app.py
+mv app.py.txt app.py
+
+# Rename Dockerfile.txt to Dockerfile (no extension)
+mv Dockerfile.txt Dockerfile
