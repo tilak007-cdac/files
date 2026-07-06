@@ -1,0 +1,127 @@
+==========Part 1: Find Tips ≥5% of the Bill Amount using Spark DataFrame
+In this section, we load the tips.csv dataset, apply a conditional filter where tip≥0.05×total_bill, and display the matching records
+
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
+
+# 1. Initialize Spark Session
+spark = SparkSession.builder \
+    .appName("Tips Analysis - DataFrame") \
+    .getOrCreate()
+
+# 2. Load the dataset (Assuming standard columns: total_bill, tip, sex, smoker, day, time, size)
+tips_df = spark.read.csv("tips.csv", header=True, inferSchema=True)
+
+# 3. Filter tips that are 5% or above the bill amount
+# Condition: tip >= 0.05 * total_bill
+filtered_df = tips_df.filter(col("tip") >= (col("total_bill") * 0.05))
+
+# 4. Display the results
+print("--- Tips that are 5% or above the bill amount (DataFrame API) ---")
+filtered_df.show()
+
+==============Part 2: Find Tips ≥5% of the Bill Amount using Spark SQL
+
+# 1. Create a temporary view from the existing DataFrame
+tips_df.createOrReplaceTempView("tips_view")
+
+# 2. Run Spark SQL Query
+sql_result = spark.sql("""
+    SELECT * FROM tips_view 
+    WHERE tip >= 0.05 * total_bill
+""")
+
+# 3. Display the results
+print("--- Tips that are 5% or above the bill amount (Spark SQL) ---")
+sql_result.show()
+
+
+=======Part 3: Kafka Producer to Add New 'Tips' Records
+To interact with Apache Kafka, make sure you have the kafka-python library installed (!pip install kafka-python). This script reads sample new records from a JSON format and simulates a producer running three distinct times to send three records to a Kafka topic named tips_topic.
+File Setup (tips.json):
+Ensure you have a tips.json file in your directory containing the new records:
+
+[
+  {"total_bill": 16.99, "tip": 1.01, "sex": "Female", "smoker": "No", "day": "Sun", "time": "Dinner", "size": 2},
+  {"total_bill": 10.34, "tip": 1.66, "sex": "Male", "smoker": "No", "day": "Sun", "time": "Dinner", "size": 3},
+  {"total_bill": 21.01, "tip": 3.50, "sex": "Male", "smoker": "No", "day": "Sun", "time": "Dinner", "size": 3}
+]
+
+##Producer code 
+
+import json
+import time
+from kafka import KafkaProducer
+
+# 1. Initialize Kafka Producer (Assuming Kafka Broker runs on localhost:9092)
+producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
+
+topic_name = 'tips_topic'
+
+# 2. Load the records from the tips json file
+with open('tips.json', 'r') as f:
+    new_records = json.load(f)
+
+# 3. Run the Producer 3 times to send 3 records
+for i in range(3):
+    record = new_records[i]
+    print(f"\n[Producer] Running Run #{i+1}...")
+    
+    # Send record to Kafka topic
+    producer.send(topic_name, value=record)
+    producer.flush()
+    
+    print(f"[Producer] Successfully sent record: {record}")
+    time.sleep(2)  # Delay between runs to observe consumer counts
+
+#consumer code
+
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, from_json
+from pyspark.sql.types import StructType, StructField, DoubleType, StringType, IntegerType
+
+# 1. Initialize Spark Session with Kafka ingestion jar package support
+spark = SparkSession.builder \
+    .appName("Kafka PySpark Consumer") \
+    .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0") \
+    .getOrCreate()
+
+# 2. Explicitly define the schema structure matching the JSON entries
+tips_schema = StructType([
+    StructField("total_bill", DoubleType(), True),
+    StructField("tip", DoubleType(), True),
+    StructField("sex", StringType(), True),
+    StructField("smoker", StringType(), True),
+    StructField("day", StringType(), True),
+    StructField("time", StringType(), True),
+    StructField("size", IntegerType(), True)
+])
+
+# 3. Read streaming data from Kafka topic
+kafka_stream_df = spark.readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "localhost:9092") \
+    .option("subscribe", "tips_topic") \
+    .option("startingOffsets", "latest") \
+    .load()
+
+# 4. Cast value column from binary to string and unpack the JSON structure
+parsed_tips_df = kafka_stream_df \
+    .selectExpr("CAST(value AS STRING) as json_payload") \
+    .select(from_json(col("json_payload"), tips_schema).alias("data")) \
+    .select("data.*")
+
+# 5. Compute the running total count of entries received in the DataFrame
+running_count_df = parsed_tips_df.groupBy().count()
+
+# 6. Output the live update stream directly to the console terminal
+query = running_count_df.writeStream \
+    .outputMode("complete") \
+    .format("console") \
+    .start()
+
+print("Streaming Consumer Started. Waiting for Producer entries...")
+query.awaitTermination()
