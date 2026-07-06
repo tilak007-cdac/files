@@ -1,0 +1,104 @@
+Here is the step-by-step guide to setting up your Git repository, hosting it on Render, 
+and configuring the automated deployment pipeline using a Git Bash environment.
+
+---
+
+## Part 1: Local Git Setup & First Commit
+
+Open **Git Bash** and run the following commands:
+
+```bash
+# 1. Create a new directory and navigate into it
+mkdir my-render-site && cd my-render-site
+
+# 2. Initialize a local Git repository
+git init
+
+# 3. Create the index.html file with the required text
+echo "<h1>Site is under construction</h1>" > index.html
+
+# 4. Stage and commit the file
+git add index.html
+git commit -m "Initial commit: Site under construction"
+
+```
+
+---
+
+## Part 2: Push Code to GitHub
+
+1. Go to [GitHub](https://github.com/) and log in.
+2. Click the **New** button to create a new repository.
+3. Name your repository (e.g., `my-render-site`). Leave it **Public** and **do not** initialize it with a README or .gitignore. Click **Create repository**.
+4. Copy the commands under the section *"…or push an existing repository from the command line"*. It will look like this in your Git Bash:
+
+```bash
+# Rename your default branch to main
+git branch -M main
+
+# Link your local repository to GitHub (Replace with YOUR actual GitHub URL)
+git remote add origin https://github.com/YOUR_USERNAME/my-render-site.git
+
+# Push the code
+git push -u origin main
+
+```
+
+---
+
+## Part 3: Deploy to Render
+
+1. Go to [Render Dashboard](https://dashboard.render.com/) and log in (signing in with your GitHub account is recommended).
+2. Click **New +** and select **Static Site**.
+3. Connect your GitHub account if you haven't already. Under **Connect a repository**, find your `my-render-site` repository and click **Connect**.
+4. Give your site a unique name.
+5. Leave the default settings as they are:
+* **Branch:** `main`
+* **Build Command:** *(Leave blank)*
+* **Publish directory:** `.` (or leave blank for the root directory)
+
+
+6. Scroll down and click **Deploy Static Site**.
+
+Once the deployment finishes, Render will provide you with a live URL (e.g., `https://my-render-site.onrender.com`). Visit it to verify it displays **"Site is under construction"**.
+
+---
+
+## Part 4: Configure Render Webhook on GitHub
+
+While Render automatically deploys GitHub commits by default if you connected your account, setting up an explicit build webhook ensures your pipeline triggers correctly across decoupled workflows.
+
+1. On your Render static site dashboard, go to the **Settings** tab.
+2. Scroll down to the **Deploy Hook** section and copy the **Deploy Hook URL**.
+3. Go back to your repository on **GitHub**.
+4. Click on **Settings** -> **Webhooks** -> **Add webhook**.
+5. Paste the Render Deploy Hook URL into the **Payload URL** field.
+6. Set **Content type** to `application/json`.
+7. Leave the rest as default ("Just the push event") and click **Add webhook**.
+
+---
+
+## Part 5: Update & Verify the Automatic Pipeline
+
+Now, update your code locally and let the pipeline push changes automatically.
+
+```bash
+# 1. Update index.html with your Name and PRN (Replace placeholders)
+echo "<h1>Name: Your Name</h1><h2>PRN: Your PRN Number</h2>" > index.html
+
+# 2. Stage the changes
+git add index.html
+
+# 3. Commit the changes
+git commit -m "Update: Added name and PRN"
+
+# 4. Push to GitHub
+git push origin main
+
+```
+
+### Verification
+
+1. Head back to your **Render Dashboard**. You will notice a new build has automatically triggered and says *“In progress”* followed by *“Live”*.
+2. Refresh your Render website URL.
+3. Your updated webpage will now automatically display your **Name** and **PRN**, confirming that your CI/CD deployment pipeline is working perfectly.
